@@ -5,7 +5,7 @@ This repository serves as supplementary of the manuscript published as Chen et a
 
 ## Interactive Visualizations
 The interactive visualization is the supplementary figures from Chen et al., 2026 Sleep. 
-- **[Algorithm Ranking (Sankey Diagram)](https://pinweichen.github.io/Pediatric_Sleep_ML/Sankey/)** — Compare 8 algorithms across 6 performance metrics
+- **[Algorithm Ranking (Sankey Diagram)](https://pinweichen.github.io/Sleep-WakeClassification_Pediatric/)** — Compare 8 algorithms across 6 performance metrics
 
 ## Data Structure
 For machine learning modeling, your input CSV needs columns: `timestamp` (ISO 8601), `x`, `y`, `z` (accelerometer in g) and Ground-truth `label` column.
