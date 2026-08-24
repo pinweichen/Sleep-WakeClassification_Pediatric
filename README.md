@@ -8,6 +8,12 @@ This repository serves as supplementary of the manuscript published as Chen et a
 The interactive visualization is the supplementary figures from Chen et al., 2026 Sleep. 
 - **[Algorithm Ranking (Sankey Diagram)](https://pinweichen.github.io/Pediatric_Sleep_ML/Sankey/)** — Compare 8 algorithms across 6 performance metrics
 
+## Data Structure
+For machine learning modeling, your input CSV needs columns: `timestamp` (ISO 8601), `x`, `y`, `z` (accelerometer in g) and Ground-truth `label` column.
+The script handles all preprocessing internally (resampling, FFT feature extraction, epoching) and outputs one prediction CSV per subject.
+
+For GGIR, the original ".bin" files were used. 
+
 ## Pipeline for LSTM
 
 | Step | Script | Description |
@@ -20,12 +26,8 @@ The interactive visualization is the supplementary figures from Chen et al., 202
 
 | Step | Script | Description |
 |---|---|---|
-| 1 | `data_ingestion.py` | Convert per-subject CSVs to pipeline format |
-| 2 | `preprocessing/preprocessing_feature.py` | Crop signals and extract FFT features (1–30 Hz) |
-| 3 | `source/analysis_runner_weighted_split_torch.py` | Train LocalGlobalLSTM with LOSO cross-validation |
-
-Your input CSV needs columns: `timestamp` (ISO 8601), `x`, `y`, `z` (accelerometer in g). Ground-truth `label` column is optional.
-The script handles all preprocessing internally (resampling, FFT feature extraction, epoching) and outputs one prediction CSV per subject.
+| 1 | `feature_create.R` | Create features for the classic models |
+| 2 | `ML_master_script_all_ML.R` | This is the main script that implement the preprocessing and nested cross validation |
 
 ## Requirements
 
@@ -33,6 +35,37 @@ The script handles all preprocessing internally (resampling, FFT feature extract
 Python >= 3.9
 torch >= 1.12
 numpy, pandas, scikit-learn, scipy, tqdm
+
+R >= 4.4.0
+tidyverse >= 2.0.0
+pacman >= 0.5.1
+data.table >= 1.18.2.1
+doParallel >= 1.0.17
+futile.logger >= 1.4.9
+workflowsets >= 1.1.1
+
+- pacman for package installation and loading
+
+| Package | Purpose |
+|----------|----------|
+| tidymodels | Machine learning framework |
+| tidyverse | Data manipulation and visualization |
+| data.table | High-performance data processing |
+| doParallel | Parallel model training |
+| parallel | Native parallel computing |
+| doFuture | Future-based parallel backend |
+| vip | Variable importance analysis |
+| themis | SMOTE oversampling |
+| discrim | Naive Bayes models |
+| ranger | Random forest models |
+| kknn | k-nearest neighbors models |
+| glmnet | Regularized logistic regression |
+| xgboost | Extreme gradient boosting |
+| kernlab | Support vector machines |
+| baguette | Bagged tree models |
+| workflowsets | Workflow orchestration |
+| futile.logger | Logging |
+
 ```
 
 ## Citation

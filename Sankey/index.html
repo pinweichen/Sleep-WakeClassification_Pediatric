@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Euclidean Distance – Algorithm Ranking Sankey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f8f9fb;
+    color: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #1a1a2e;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 18px;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .controls label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 36px 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  select:hover { border-color: #6366f1; }
+  select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+  .chart-wrapper {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.04);
+    padding: 28px 32px 20px;
+    overflow-x: auto;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+  }
+  .note {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 10px;
+    text-align: center;
+  }
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(26,26,46,.92);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 10;
+    max-width: 220px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Euclidean Distance — Algorithm Ranking</h1>
+<p class="subtitle">Lower distance = better performance (Rank 1 is best)</p>
+
+<div class="controls">
+  <label for="biasSelect">Bias Type:</label>
+  <select id="biasSelect">
+    <option value="Total Sleep Time Differences">Sleep Duration</option>
+    <option value="WASO Differences">WASO (Wake After Sleep Onset)</option>
+  </select>
+</div>
+
+<div class="chart-wrapper">
+  <svg id="chart"></svg>
+</div>
+<div class="legend" id="legend"></div>
+<p class="note">Rank 1 = lowest Euclidean distance (best). Ribbons connect each algorithm's rank across metrics.</p>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+const raw = [
+  ["Long Short Term Memory","Balanced Accuracy","Total Sleep Time Differences",0.1825,1],
+  ["Long Short Term Memory","Balanced Accuracy","WASO Differences",0.1793,1],
+  ["Long Short Term Memory","Sensitivity","Total Sleep Time Differences",0.1583,2],
+  ["Long Short Term Memory","Sensitivity","WASO Differences",0.1587,3],
+  ["Long Short Term Memory","Specificity","Total Sleep Time Differences",0.2238,1],
+  ["Long Short Term Memory","Specificity","WASO Differences",0.2157,1],
+  ["Long Short Term Memory","F1 Score","Total Sleep Time Differences",0.1324,2],
+  ["Long Short Term Memory","F1 Score","WASO Differences",0.1309,1],
+  ["Long Short Term Memory","Cohens Kappa","Total Sleep Time Differences",0.3558,1],
+  ["Long Short Term Memory","Cohens Kappa","WASO Differences",0.3551,1],
+  ["Long Short Term Memory","MCC","Total Sleep Time Differences",0.3384,1],
+  ["Long Short Term Memory","MCC","WASO Differences",0.3372,1],
+  ["Neural Network","Balanced Accuracy","Total Sleep Time Differences",0.2375,2],
+  ["Neural Network","Balanced Accuracy","WASO Differences",0.2787,4],
+  ["Neural Network","Sensitivity","Total Sleep Time Differences",0.1812,5],
+  ["Neural Network","Sensitivity","WASO Differences",0.2264,6],
+  ["Neural Network","Specificity","Total Sleep Time Differences",0.2983,2],
+  ["Neural Network","Specificity","WASO Differences",0.3379,4],
+  ["Neural Network","F1 Score","Total Sleep Time Differences",0.1625,3],
+  ["Neural Network","F1 Score","WASO Differences",0.2122,6],
+  ["Neural Network","Cohens Kappa","Total Sleep Time Differences",0.4836,3],
+  ["Neural Network","Cohens Kappa","WASO Differences",0.5068,4],
+  ["Neural Network","MCC","Total Sleep Time Differences",0.4708,3],
+  ["Neural Network","MCC","WASO Differences",0.4946,4],
+  ["Random Forest","Balanced Accuracy","Total Sleep Time Differences",0.2492,5],
+  ["Random Forest","Balanced Accuracy","WASO Differences",0.2845,5],
+  ["Random Forest","Sensitivity","Total Sleep Time Differences",0.1775,4],
+  ["Random Forest","Sensitivity","WASO Differences",0.2163,5],
+  ["Random Forest","Specificity","Total Sleep Time Differences",0.3299,6],
+  ["Random Forest","Specificity","WASO Differences",0.3638,6],
+  ["Random Forest","F1 Score","Total Sleep Time Differences",0.1668,4],
+  ["Random Forest","F1 Score","WASO Differences",0.2100,5],
+  ["Random Forest","Cohens Kappa","Total Sleep Time Differences",0.4955,5],
+  ["Random Forest","Cohens Kappa","WASO Differences",0.5154,5],
+  ["Random Forest","MCC","Total Sleep Time Differences",0.4819,5],
+  ["Random Forest","MCC","WASO Differences",0.5025,5],
+  ["Logistic Regression","Balanced Accuracy","Total Sleep Time Differences",0.2381,3],
+  ["Logistic Regression","Balanced Accuracy","WASO Differences",0.2639,2],
+  ["Logistic Regression","Sensitivity","Total Sleep Time Differences",0.1251,1],
+  ["Logistic Regression","Sensitivity","WASO Differences",0.1560,2],
+  ["Logistic Regression","Specificity","Total Sleep Time Differences",0.3615,7],
+  ["Logistic Regression","Specificity","WASO Differences",0.3838,7],
+  ["Logistic Regression","F1 Score","Total Sleep Time Differences",0.1304,1],
+  ["Logistic Regression","F1 Score","WASO Differences",0.1651,2],
+  ["Logistic Regression","Cohens Kappa","Total Sleep Time Differences",0.4706,2],
+  ["Logistic Regression","Cohens Kappa","WASO Differences",0.4850,2],
+  ["Logistic Regression","MCC","Total Sleep Time Differences",0.4613,2],
+  ["Logistic Regression","MCC","WASO Differences",0.4759,2],
+  ["Random Forest (Adult)","Balanced Accuracy","Total Sleep Time Differences",0.3307,8],
+  ["Random Forest (Adult)","Balanced Accuracy","WASO Differences",0.3777,8],
+  ["Random Forest (Adult)","Sensitivity","Total Sleep Time Differences",0.3708,8],
+  ["Random Forest (Adult)","Sensitivity","WASO Differences",0.4119,8],
+  ["Random Forest (Adult)","Specificity","Total Sleep Time Differences",0.3093,4],
+  ["Random Forest (Adult)","Specificity","WASO Differences",0.3615,5],
+  ["Random Forest (Adult)","F1 Score","Total Sleep Time Differences",0.3075,8],
+  ["Random Forest (Adult)","F1 Score","WASO Differences",0.3558,8],
+  ["Random Forest (Adult)","Cohens Kappa","Total Sleep Time Differences",0.6299,8],
+  ["Random Forest (Adult)","Cohens Kappa","WASO Differences",0.6590,8],
+  ["Random Forest (Adult)","MCC","Total Sleep Time Differences",0.5908,8],
+  ["Random Forest (Adult)","MCC","WASO Differences",0.6216,8],
+  ["GGIR-CK","Balanced Accuracy","Total Sleep Time Differences",0.3114,6],
+  ["GGIR-CK","Balanced Accuracy","WASO Differences",0.3216,7],
+  ["GGIR-CK","Sensitivity","Total Sleep Time Differences",0.3332,7],
+  ["GGIR-CK","Sensitivity","WASO Differences",0.3450,7],
+  ["GGIR-CK","Specificity","Total Sleep Time Differences",0.3021,3],
+  ["GGIR-CK","Specificity","WASO Differences",0.3093,2],
+  ["GGIR-CK","F1 Score","Total Sleep Time Differences",0.2772,7],
+  ["GGIR-CK","F1 Score","WASO Differences",0.2909,7],
+  ["GGIR-CK","Cohens Kappa","Total Sleep Time Differences",0.5957,7],
+  ["GGIR-CK","Cohens Kappa","WASO Differences",0.6015,7],
+  ["GGIR-CK","MCC","Total Sleep Time Differences",0.5605,7],
+  ["GGIR-CK","MCC","WASO Differences",0.5598,7],
+  ["GGIR-vH","Balanced Accuracy","Total Sleep Time Differences",0.2482,4],
+  ["GGIR-vH","Balanced Accuracy","WASO Differences",0.2683,3],
+  ["GGIR-vH","Sensitivity","Total Sleep Time Differences",0.1916,6],
+  ["GGIR-vH","Sensitivity","WASO Differences",0.2140,4],
+  ["GGIR-vH","Specificity","Total Sleep Time Differences",0.3132,5],
+  ["GGIR-vH","Specificity","WASO Differences",0.3317,3],
+  ["GGIR-vH","F1 Score","Total Sleep Time Differences",0.1718,5],
+  ["GGIR-vH","F1 Score","WASO Differences",0.1967,4],
+  ["GGIR-vH","Cohens Kappa","Total Sleep Time Differences",0.4882,4],
+  ["GGIR-vH","Cohens Kappa","WASO Differences",0.4992,3],
+  ["GGIR-vH","MCC","Total Sleep Time Differences",0.4774,4],
+  ["GGIR-vH","MCC","WASO Differences",0.4886,3],
+  ["GGIR-S","Balanced Accuracy","Total Sleep Time Differences",0.3163,7],
+  ["GGIR-S","Balanced Accuracy","WASO Differences",0.3103,6],
+  ["GGIR-S","Sensitivity","Total Sleep Time Differences",0.1701,3],
+  ["GGIR-S","Sensitivity","WASO Differences",0.1463,1],
+  ["GGIR-S","Specificity","Total Sleep Time Differences",0.5037,8],
+  ["GGIR-S","Specificity","WASO Differences",0.5021,8],
+  ["GGIR-S","F1 Score","Total Sleep Time Differences",0.1855,6],
+  ["GGIR-S","F1 Score","WASO Differences",0.1729,3],
+  ["GGIR-S","Cohens Kappa","Total Sleep Time Differences",0.5423,6],
+  ["GGIR-S","Cohens Kappa","WASO Differences",0.5393,6],
+  ["GGIR-S","MCC","Total Sleep Time Differences",0.5210,6],
+  ["GGIR-S","MCC","WASO Differences",0.5174,6],
+];
+
+const data = raw.map(d => ({
+  algorithm: d[0], metric: d[1], bias: d[2], score: d[3], rank: d[4]
+}));
+
+const metrics = ["Balanced Accuracy","Sensitivity","Specificity","F1 Score","Cohens Kappa","MCC"];
+const algorithms = [
+  "Long Short Term Memory","Logistic Regression","Neural Network",
+  "Random Forest","GGIR-vH","GGIR-S","GGIR-CK","Random Forest (Adult)"
+];
+const algoShort = {
+  "Long Short Term Memory": "LSTM",
+  "Neural Network": "NN",
+  "Random Forest": "RF",
+  "Logistic Regression": "LR",
+  "Random Forest (Adult)": "RF (Adult)",
+  "GGIR-CK": "GGIR-CK",
+  "GGIR-vH": "GGIR-vH",
+  "GGIR-S": "GGIR-S"
+};
+
+const colorMap = {
+  "Long Short Term Memory": "#4f46e5",
+  "Neural Network":         "#e11d48",
+  "Random Forest":          "#059669",
+  "Logistic Regression":    "#d97706",
+  "Random Forest (Adult)":  "#7c3aed",
+  "GGIR-CK":               "#0891b2",
+  "GGIR-vH":               "#dc2626",
+  "GGIR-S":                "#2563eb"
+};
+
+// ── DIMENSIONS ────────────────────────────────────────────────────────
+const margin = { top: 80, right: 80, bottom: 50, left: 80 };
+const colWidth = 170;       // space between metric columns
+const chartW = (metrics.length - 1) * colWidth;
+const bannerH = 34;
+const bannerW = 120;
+const rankGap = 50;         // vertical space per rank
+const numRanks = algorithms.length;
+const chartH = (numRanks + 1) * rankGap;
+const width  = chartW + margin.left + margin.right;
+const height = chartH + margin.top + margin.bottom;
+
+const svg = d3.select("#chart")
+  .attr("width", width)
+  .attr("height", height);
+
+const g = svg.append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const tooltip = d3.select("#tooltip");
+
+// ── SCALES ────────────────────────────────────────────────────────────
+const xScale = d3.scalePoint().domain(metrics).range([0, chartW]);
+const yScale = rank => rank * rankGap;
+
+// ── AXIS LABELS ───────────────────────────────────────────────────────
+// metric labels at top
+g.selectAll(".metric-label")
+  .data(metrics)
+  .join("text")
+  .attr("class","metric-label")
+  .attr("x", d => xScale(d))
+  .attr("y", -40)
+  .attr("text-anchor","middle")
+  .attr("font-size","13px")
+  .attr("font-weight","700")
+  .attr("fill","#374151")
+  .text(d => d);
+
+// rank labels on the left
+g.selectAll(".rank-label")
+  .data(d3.range(1, numRanks + 1))
+  .join("text")
+  .attr("class","rank-label")
+  .attr("x", -20)
+  .attr("y", d => yScale(d) + 4)
+  .attr("text-anchor","middle")
+  .attr("font-size","12px")
+  .attr("font-weight","600")
+  .attr("fill","#9ca3af")
+  .text(d => `#${d}`);
+
+// thin vertical grid lines
+g.selectAll(".grid-line")
+  .data(metrics)
+  .join("line")
+  .attr("class","grid-line")
+  .attr("x1", d => xScale(d))
+  .attr("x2", d => xScale(d))
+  .attr("y1", yScale(0.5))
+  .attr("y2", yScale(numRanks + 0.5))
+  .attr("stroke","#e5e7eb")
+  .attr("stroke-dasharray","3,3");
+
+// ── RIBBON GENERATOR ──────────────────────────────────────────────────
+function ribbonPath(x0, y0, x1, y1) {
+  const mx = (x0 + x1) / 2;
+  return `M${x0},${y0} C${mx},${y0} ${mx},${y1} ${x1},${y1}`;
+}
+
+// ── GROUPS FOR LAYERS ─────────────────────────────────────────────────
+const ribbonLayer = g.append("g").attr("class","ribbons");
+const bannerLayer = g.append("g").attr("class","banners");
+
+// ── DRAW ──────────────────────────────────────────────────────────────
+function draw(bias) {
+  const filtered = data.filter(d => d.bias === bias);
+
+  // Build lookup: algo → metric → {score, rank}
+  const lookup = {};
+  filtered.forEach(d => {
+    if (!lookup[d.algorithm]) lookup[d.algorithm] = {};
+    lookup[d.algorithm][d.metric] = { score: d.score, rank: d.rank };
+  });
+
+  // ─── RIBBONS ────────────────────────────────────────────────────────
+  const ribbonData = [];
+  algorithms.forEach(algo => {
+    for (let i = 0; i < metrics.length - 1; i++) {
+      const m0 = metrics[i], m1 = metrics[i + 1];
+      const r0 = lookup[algo][m0], r1 = lookup[algo][m1];
+      ribbonData.push({
+        algo, m0, m1,
+        x0: xScale(m0), y0: yScale(r0.rank),
+        x1: xScale(m1), y1: yScale(r1.rank),
+        score0: r0.score, score1: r1.score,
+        rank0: r0.rank, rank1: r1.rank
+      });
+    }
+  });
+
+  const ribbons = ribbonLayer.selectAll(".ribbon")
+    .data(ribbonData, d => d.algo + d.m0);
+
+  ribbons.exit().remove();
+
+  const ribbonsEnter = ribbons.enter()
+    .append("path")
+    .attr("class","ribbon")
+    .attr("fill","none")
+    .attr("stroke-width", 3)
+    .attr("stroke-linecap","round")
+    .attr("opacity", 0.45);
+
+  ribbonsEnter.merge(ribbons)
+    .on("mouseenter", function(ev, d) {
+      d3.selectAll(".ribbon").attr("opacity", 0.1);
+      d3.selectAll(".ribbon").filter(r => r.algo === d.algo).attr("opacity", 0.7);
+      d3.selectAll(".banner-g").attr("opacity", 0.15);
+      d3.selectAll(".banner-g").filter(r => r.algo === d.algo).attr("opacity", 1);
+    })
+    .on("mouseleave", function() {
+      d3.selectAll(".ribbon").attr("opacity", 0.45);
+      d3.selectAll(".banner-g").attr("opacity", 1);
+    })
+    .transition().duration(700).ease(d3.easeCubicInOut)
+    .attr("d", d => ribbonPath(d.x0, d.y0, d.x1, d.y1))
+    .attr("stroke", d => colorMap[d.algo]);
+
+  // ─── BANNERS ────────────────────────────────────────────────────────
+  const bannerData = [];
+  algorithms.forEach(algo => {
+    metrics.forEach(metric => {
+      const info = lookup[algo][metric];
+      bannerData.push({
+        algo, metric,
+        x: xScale(metric),
+        y: yScale(info.rank),
+        score: info.score,
+        rank: info.rank
+      });
+    });
+  });
+
+  const banners = bannerLayer.selectAll(".banner-g")
+    .data(bannerData, d => d.algo + d.metric);
+
+  banners.exit().remove();
+
+  const bannersEnter = banners.enter()
+    .append("g")
+    .attr("class","banner-g")
+    .style("cursor","pointer");
+
+  bannersEnter.append("rect")
+    .attr("class","banner-rect")
+    .attr("rx", 6).attr("ry", 6)
+    .attr("width", bannerW).attr("height", bannerH)
+    .attr("x", -bannerW / 2).attr("y", -bannerH / 2);
+
+  bannersEnter.append("text")
+    .attr("class","banner-name")
+    .attr("text-anchor","middle")
+    .attr("dy", "-0.2em")
+    .attr("font-size","11px")
+    .attr("font-weight","700")
+    .attr("fill","#fff");
+
+  bannersEnter.append("text")
+    .attr("class","banner-score")
+    .attr("text-anchor","middle")
+    .attr("dy", "1em")
+    .attr("font-size","10px")
+    .attr("font-weight","500")
+    .attr("fill","rgba(255,255,255,.85)");
+
+  const merged = bannersEnter.merge(banners);
+
+  merged
+    .on("mouseenter", function(ev, d) {
+      d3.selectAll(".ribbon").attr("opacity", 0.1);
+      d3.selectAll(".ribbon").filter(r => r.algo === d.algo).attr("opacity", 0.7);
+      d3.selectAll(".banner-g").attr("opacity", 0.15);
+      d3.selectAll(".banner-g").filter(r => r.algo === d.algo).attr("opacity", 1);
+      tooltip.style("opacity", 1)
+        .html(`<strong>${d.algo}</strong><br>${d.metric}<br>Distance: ${d.score.toFixed(4)}<br>Rank: #${d.rank}`)
+        .style("left", (ev.pageX + 14) + "px")
+        .style("top", (ev.pageY - 28) + "px");
+    })
+    .on("mousemove", function(ev) {
+      tooltip.style("left", (ev.pageX + 14) + "px").style("top", (ev.pageY - 28) + "px");
+    })
+    .on("mouseleave", function() {
+      d3.selectAll(".ribbon").attr("opacity", 0.45);
+      d3.selectAll(".banner-g").attr("opacity", 1);
+      tooltip.style("opacity", 0);
+    })
+    .transition().duration(700).ease(d3.easeCubicInOut)
+    .attr("transform", d => `translate(${d.x},${d.y})`);
+
+  merged.select(".banner-rect")
+    .attr("fill", d => colorMap[d.algo]);
+
+  merged.select(".banner-name")
+    .text(d => algoShort[d.algo]);
+
+  merged.select(".banner-score")
+    .text(d => d.score.toFixed(4));
+}
+
+// ── LEGEND ────────────────────────────────────────────────────────────
+const algoLegend = {
+  "Long Short Term Memory": "LSTM — Long Short Term Memory",
+  "Neural Network": "NN — Neural Network",
+  "Random Forest": "RF — Random Forest",
+  "Logistic Regression": "LR — Logistic Regression",
+  "Random Forest (Adult)": "RF (Adult) — Random Forest (Adult)",
+  "GGIR-vH": "GGIR-vH — van Hees Algorithm",
+  "GGIR-S": "GGIR-S — GGIR-adapted Sadeh Algorithm",
+  "GGIR-CK": "GGIR-CK — GGIR-adapted Cole-Kripke Algorithm"
+};
+const legendEl = document.getElementById("legend");
+algorithms.forEach(algo => {
+  const item = document.createElement("div");
+  item.className = "legend-item";
+  const swatch = document.createElement("div");
+  swatch.className = "legend-swatch";
+  swatch.style.background = colorMap[algo];
+  item.appendChild(swatch);
+  item.appendChild(document.createTextNode(algoLegend[algo]));
+  legendEl.appendChild(item);
+});
+
+// ── INIT & EVENTS ─────────────────────────────────────────────────────
+const select = document.getElementById("biasSelect");
+draw(select.value);
+select.addEventListener("change", () => draw(select.value));
+</script>
+</body>
+</html>
