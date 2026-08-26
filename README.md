@@ -42,6 +42,7 @@ data.table >= 1.18.2.1
 doParallel >= 1.0.17
 futile.logger >= 1.4.9
 workflowsets >= 1.1.1
+GGIR >= 3.3-4
 
 - pacman for package installation and loading
 
