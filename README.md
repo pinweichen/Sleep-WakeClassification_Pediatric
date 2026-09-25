@@ -1,6 +1,6 @@
 # Pediatric Sleep–Wake Classification (Actigraphy-Only LSTM and classic models)
 
-This repository serves as supplementary of the manuscript published as Chen et al., (2026) The Sleep-Wake Classification Performance of Pediatric-Trained Machine Learning Algorithms for Accelerometer Data, Sleep. The LSTM model built was adapted from LSTM-Sleep model (Weaver et al., *Journal of Sleep Research*, 2025) with modification of cross validation. The rest of the classic models were developed from tidyverse and tidymodel R packages. Please cite Chen et al., 2026 if you utilize the scripts.  Please cite Weaver et al., 2025 if also used LSTM model.
+This repository serves as supplementary of the manuscript published as Chen et al., (in-review) The Sleep-Wake Classification Performance of Pediatric-Trained Machine Learning Algorithms for Accelerometer Data. The LSTM model built was adapted from LSTM-Sleep model (Weaver et al., *Journal of Sleep Research*, 2025) with modification of cross validation. The rest of the classic models were developed from tidyverse and tidymodel R packages. Please cite Chen et al., 2026 if you utilize the scripts.  Please cite Weaver et al., 2025 if also used LSTM model.
 
 
 ## Interactive Visualizations
@@ -71,7 +71,7 @@ GGIR >= 3.3-4
 ## Citation
 
 If you use this pipeline, please cite the original paper:
-> Chen, P-w et al. (2026). The Sleep-Wake Classification Performance of Pediatric-Trained Machine Learning Algorithms for Accelerometer Data. *Journal of Sleep*.
+> Chen, P-w et al. (in-review). The Sleep-Wake Classification Performance of Pediatric-Trained Machine Learning Algorithms for Accelerometer Data.
 > 
 > Weaver, T. et al. (2025). Predicting Sleep and Sleep Stage in Children Using Actigraphy and Heart Rate via a Local-Global LSTM. *Journal of Sleep Research*.
 
